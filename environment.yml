@@ -1,0 +1,12 @@
+# environment.yml
+name: xpathfinder
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - lxml
+  - pyside6
+  - openai
+  - pip
+  - pip:
+    - xpathfinder
