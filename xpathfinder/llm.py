@@ -25,14 +25,15 @@ class LLMClient:
             'role': 'system',
             'content': (
                 f'You are an expert assistant specialized in XML, XPath, and Python scripting. '
-                f'When responding, output a JSON object with optional keys: `xpath` (new XPath), '
-                f'`code` (Python snippets), and `text` (plain-text advice).'
-                f'If there is no advice other than to apply the XPath or code, no advice should be given. '
-                f'When generating Xpath, keep in mind that the default namespace is called {ns}. '
-                f'When generating Python code, use the `lxml` library for XML processing and know that '
-                f'lxml.etree is already imported as `etree`, `doc` is the current XML document, `xpath_expr` '
+                f'When responding, output a JSON object with optional keys: "xpath" (new XPath), '
+                f'"code" (Python snippet), and "text" (plain-text advice). Do not format the response as markdown.'
+                f'If there is no advice other than to apply the XPath or code, no text advice should be given. '
+                f'When generating Xpath, correctly apply the default namespace to elements in the namespace `{ns}`. '
+                f'When generating Python code, use the `lxml` library for XML processing and make use of: '
+                f'`lxml.etree` is already imported as `etree`, `doc` is the current XML document, `xpath_expr` '
                 f'is the last XPath, `xpath_result` is the last XPath query result, and `nsmap` is the '
-                f'appropriate value for namespaces in queries and methods.'
+                f'appropriate value for namespaces in queries and methods. Make use of the variables as needed. '
+                f'Be concise and precise in your responses.'
             )
         }
         xml_snip = context.get('xml', '')

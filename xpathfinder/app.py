@@ -496,6 +496,6 @@ class MainWindow(QMainWindow):
             self._run_xpath()
         if 'code' in response:
             self.code_editor.setPlainText(response['code'])
-            self._run_code()
+            # not running the code automatically
         if 'text' in response:
             self.output_view.append(response['text'])
