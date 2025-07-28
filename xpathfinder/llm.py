@@ -1,6 +1,8 @@
 import os
 import json
+import win32cred
 from openai import OpenAI
+from typing import Union
 
 class LLMClient:
     """
@@ -8,9 +10,11 @@ class LLMClient:
     Always returns a dict with optional keys: 'xpath', 'code', 'text'.
     """
     def __init__(self, api_key=None, model="gpt-3.5-turbo", **client_kwargs):
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.api_key = api_key or retrieve_api_key('OpenAI API Key')
+        self.api_key_env = False
         if not self.api_key:
-            raise ValueError("OpenAI API key not provided. Set OPENAI_API_KEY env var or pass api_key.")
+            self.api_key = os.getenv("OPENAI_API_KEY")
+            self.api_key_env = True
         # Initialize new OpenAI client
         self.client = OpenAI(api_key=self.api_key, **client_kwargs)
         self.model = model
@@ -56,3 +60,30 @@ class LLMClient:
             return json.loads(raw)
         except json.JSONDecodeError:
             return {"text": raw}
+
+
+def store_api_key(target_name: str, api_key_value: str) -> None:
+    credential = {
+        'Type': win32cred.CRED_TYPE_GENERIC,
+        'TargetName': target_name,
+        'CredentialBlob': api_key_value,
+        'Persist': win32cred.CRED_PERSIST_LOCAL_MACHINE
+    }
+    win32cred.CredWrite(credential, 0)
+
+
+def retrieve_api_key(target_name: str) -> Union[str, None]:
+    try:
+        credential = win32cred.CredRead(target_name, win32cred.CRED_TYPE_GENERIC, 0)
+        return credential['CredentialBlob'].decode('utf16')
+    except (NameError, Exception) as e:
+        if isinstance(e, NameError) or (hasattr(e, 'funcname') and e.funcname == 'CredRead'):
+            return None
+        raise e
+
+
+def delete_api_key(target_name: str) -> None:
+    try:
+        win32cred.CredDelete(target_name, win32cred.CRED_TYPE_GENERIC, 0)
+    except NameError:
+        pass

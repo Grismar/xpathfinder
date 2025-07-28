@@ -3,14 +3,14 @@ import io
 from contextlib import redirect_stdout
 
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QFileDialog, QWidget,
+    QApplication, QMainWindow, QFileDialog, QWidget, QInputDialog,
     QVBoxLayout, QHBoxLayout, QPushButton, QPlainTextEdit,
     QTextBrowser, QLabel, QSplitter, QStyle, QSizePolicy, QLineEdit
 )
-from PySide6.QtCore import Qt, QObject
-from PySide6.QtGui import QValidator
+from PySide6.QtCore import Qt, QObject, QDir
+from PySide6.QtGui import QValidator, QAction
 from lxml import etree
-from .llm import LLMClient
+from .llm import LLMClient, store_api_key, delete_api_key
 from .history import HistoryManager
 from .xml_utils import parse_xml, apply_xpath, pretty_print
 
@@ -268,6 +268,36 @@ class MainWindow(QMainWindow):
         open_act.triggered.connect(self._open_file)
         save_act = file_menu.addAction("Save As...")
         save_act.triggered.connect(self._save_file)
+
+        file_menu = self.menuBar().addMenu("LLM (OpenAI)")
+        if self.llm.api_key:
+            if self.llm.api_key_env:
+                self.key_status_act = QAction("API Key: Environment", self)
+            else:
+                self.key_status_act = QAction("API Key: From Store", self)
+        else:
+            self.key_status_act = QAction("API Key: None", self)
+        file_menu.addAction(self.key_status_act)
+        set_key_act = file_menu.addAction("Set API key...")
+        set_key_act.triggered.connect(self._set_api_key)
+        unset_key_act = file_menu.addAction("Unset API key")
+        unset_key_act.triggered.connect(self._unset_api_key)
+
+    def _set_api_key(self):
+        text, ok = QInputDialog.getText(self, "Enter your API key",
+                                        "OpenAI API Key:", QLineEdit.EchoMode.Normal,
+                                        "")
+        if ok and text:
+            store_api_key('OpenAI API Key', text)
+            self.llm.api_key = text
+            self.llm.api_key_env = False
+            self.key_status_act.setText("API Key: From Store")
+
+    def _unset_api_key(self):
+        delete_api_key('OpenAI API Key')
+        self.llm.api_key = None
+        self.llm.api_key_env = False
+        self.key_status_act.setText("API Key: None")
 
     def _open_file(self):
         path, _ = QFileDialog.getOpenFileName(self, "Open XML File", filter="XML Files (*.xml);;All Files (*)")
