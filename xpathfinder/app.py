@@ -1,14 +1,15 @@
 import sys
 import io
 from contextlib import redirect_stdout
+from typing import Callable
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QFileDialog, QWidget, QInputDialog,
     QVBoxLayout, QHBoxLayout, QPushButton, QPlainTextEdit,
     QTextBrowser, QLabel, QSplitter, QStyle, QSizePolicy, QLineEdit
 )
-from PySide6.QtCore import Qt, QObject, QDir
-from PySide6.QtGui import QValidator, QAction
+from PySide6.QtCore import Qt, QObject
+from PySide6.QtGui import QValidator, QAction, QKeyEvent
 from lxml import etree
 from .llm import LLMClient, store_api_key, delete_api_key
 from .history import HistoryManager
@@ -22,6 +23,16 @@ class XPathFinderApp:
     def run(self):
         self.window.show()
         sys.exit(self.qt_app.exec())
+
+class CodeEditor(QPlainTextEdit):
+    def __init__(self, parent=None, execute_callback: Callable=None):
+        super().__init__(parent)
+        self.execute_callback = execute_callback
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key.Key_Return and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            self.execute_callback()
+        super().keyPressEvent(event)  # default behavior
 
 class MainWindow(QMainWindow):
     class NameSpaceValidator(QValidator):
@@ -69,6 +80,7 @@ class MainWindow(QMainWindow):
         if self.first_render:
             self.first_render = False
             self._resize_splitter()
+            self.resize(self.width() * 2, self.height())
 
     def _resize_splitter(self):
         total_h = self.height()
@@ -94,6 +106,7 @@ class MainWindow(QMainWindow):
         llm_ctrl.setSpacing(2)
         llm_ctrl.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.llm_run = QPushButton()
+        self.llm_run.setToolTip("Run - Ctrl+Enter")
         self.llm_run.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
         self.llm_undo = QPushButton()
         self.llm_undo.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowBack))
@@ -114,7 +127,7 @@ class MainWindow(QMainWindow):
         llm_ctrl.addWidget(self.llm_clear)
         llm_box.addLayout(llm_ctrl)
         # LLM query field
-        self.llm_query = QPlainTextEdit()
+        self.llm_query = CodeEditor(execute_callback=self._run_llm)
         self.llm_query.setPlaceholderText("Enter LLM query here...")
         llm_box.addWidget(self.llm_query)
 
@@ -130,6 +143,7 @@ class MainWindow(QMainWindow):
         xpath_ctrl.setSpacing(2)
         xpath_ctrl.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.xpath_run = QPushButton()
+        self.xpath_run.setToolTip("Run - Ctrl+Enter")
         self.xpath_run.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
         self.xpath_undo = QPushButton()
         self.xpath_undo.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowBack))
@@ -156,7 +170,7 @@ class MainWindow(QMainWindow):
         self.xpath_ns_edit.hide()
         xpath_box.addLayout(xpath_ctrl)
         # XPath query field
-        self.xpath_query = QPlainTextEdit()
+        self.xpath_query = CodeEditor(execute_callback=self._run_xpath)
         self.xpath_query.setPlaceholderText("Enter XPath expression here...")
         xpath_box.addWidget(self.xpath_query)
 
@@ -178,6 +192,7 @@ class MainWindow(QMainWindow):
         code_ctrl.setSpacing(2)
         code_ctrl.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.code_run = QPushButton()
+        self.code_run.setToolTip("Run - Ctrl+Enter")
         self.code_run.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
         self.code_undo = QPushButton()
         self.code_undo.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowBack))
@@ -198,8 +213,14 @@ class MainWindow(QMainWindow):
         code_ctrl.addWidget(self.code_clear)
         code_box.addLayout(code_ctrl)
         # Code editor
-        self.code_editor = QPlainTextEdit()
-        self.code_editor.setPlaceholderText("Write Python code here...\n`doc` is the XML document,\n`xpath_expr` is the last XPath,\n`xpath_result` is the last XPath result.")
+        self.code_editor = CodeEditor(execute_callback=self._run_code)
+        self.code_editor.setPlaceholderText(
+            "Write Python code here...\n\n"
+            "`etree` is imported from `lxml`\n"
+            "`doc` is the XML document (`_ElementTree`)\n"
+            "`xpath_expr` is the last XPath (`str`)\n"
+            "`xpath_result` is the last XPath result (`list[_Element]`)\n"
+            "`nsmap` is the namespace map, to be passed as `namespaces`")
         code_box.addWidget(self.code_editor)
         mid_split.addWidget(code_widget)
 
@@ -208,6 +229,35 @@ class MainWindow(QMainWindow):
         sel_box = QVBoxLayout(sel_widget)
         # Selection label
         sel_box.addWidget(QLabel("Selection Viewer"))
+        # Selection controls above the view
+        sel_ctrl = QHBoxLayout()
+        sel_ctrl.setContentsMargins(0, 0, 0, 0)
+        sel_ctrl.setSpacing(2)
+        sel_ctrl.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.strip_ns_toggle = QPushButton()
+        self.strip_ns_toggle.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogResetButton))
+        self.strip_ns_toggle.setCheckable(True)
+        self.strip_ns_toggle.setChecked(False)
+        self.strip_ns_toggle.setToolTip("Strip namespace declarations")
+        for btn in [self.strip_ns_toggle]:
+            btn.setFixedSize(32,32)
+            btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.strip_ns_toggle.toggled.connect(self._run_xpath)
+        self.strip_ns_toggle.setStyleSheet("""
+            QPushButton {
+                border: 1px solid #ccc;
+                padding: 4px 10px;
+            }
+            QPushButton:checked {
+                background-color: #ddd;
+                border-style: inset;
+            }
+            QPushButton:checked:focus {
+                outline: none;
+            }
+        """)
+        sel_ctrl.addWidget(self.strip_ns_toggle)
+        sel_box.addLayout(sel_ctrl)
         # Selection viewer
         self.selection_view = QTextBrowser()
         self.selection_view.setPlaceholderText("XPath selection output...")
@@ -379,7 +429,8 @@ class MainWindow(QMainWindow):
         self.xpath_history.add(expr)
         self.xpath_expr = expr
         self.xpath_result = apply_xpath(self.doc, expr, self.nsmap)
-        self.selection_view.setPlainText("\n".join(pretty_print(node) for node in self.xpath_result))
+        strip_ns = self.strip_ns_toggle.isChecked()
+        self.selection_view.setPlainText("\n".join(pretty_print(node, strip_ns) for node in self.xpath_result))
         self.history_view.append(f"XPath executed: {expr}")
 
     def _run_code(self):

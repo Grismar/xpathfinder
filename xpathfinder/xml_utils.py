@@ -51,13 +51,42 @@ def apply_xpath(doc: Union[Document, Node], expr: str, namespaces: dict[str, str
     return doc.xpath(expr, namespaces=namespaces)
 
 
-def pretty_print(node: Union[Node, Document, object]) -> str:
-    """
-    Convert an XML node (or any object) to a readable string.
+def strip_namespaces(source_elem):
+    if source_elem.tag is etree.Comment:
+        return etree.Comment(source_elem.text)
 
-    Tries to pretty-print XML elements, falls back to str().
-    """
+    if '}' in source_elem.tag:
+        tag_name = source_elem.tag.split('}', 1)[1]
+    else:
+        tag_name = source_elem.tag
+
+    new_elem = etree.Element(tag_name)
+
+    if source_elem.text:
+        new_elem.text = source_elem.text
+    if source_elem.tail:
+        new_elem.tail = source_elem.tail
+
+    for key, value in source_elem.attrib.items():
+        if key.startswith('xmlns') or key == 'xmlns':
+            continue
+        if '}' in key:
+            clean_key = key.split('}', 1)[1]
+        else:
+            clean_key = key
+        new_elem.set(clean_key, value)
+
+    for child in source_elem:
+        clean_child = strip_namespaces(child)
+        new_elem.append(clean_child)
+
+    return new_elem
+
+
+def pretty_print(node: Union[Node, Document, object], strip_ns: bool = False) -> str:
     try:
+        if strip_ns:
+            node = strip_namespaces(node)
         return etree.tostring(node, pretty_print=True, encoding='unicode')
     except (TypeError, ValueError):
         return str(node)
