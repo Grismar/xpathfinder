@@ -54,7 +54,7 @@ class MainWindow(QMainWindow):
     def __init__(self, xml_file=None):
         super().__init__()
         self.first_render = True
-        self.setWindowTitle("XPathfinder")
+        self.setWindowTitle('XPathfinder')
 
         # XML document state
         self.doc = None
@@ -99,14 +99,14 @@ class MainWindow(QMainWindow):
         # LLM box (#1)
         llm_box = QVBoxLayout()
         # LLM label
-        llm_box.addWidget(QLabel("LLM Query"))
+        llm_box.addWidget(QLabel('LLM Query'))
         # LLM controls
         llm_ctrl = QHBoxLayout()
         llm_ctrl.setContentsMargins(0, 0, 0, 0)
         llm_ctrl.setSpacing(2)
         llm_ctrl.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.llm_run = QPushButton()
-        self.llm_run.setToolTip("Run - Ctrl+Enter")
+        self.llm_run.setToolTip('Run - Ctrl+Enter')
         self.llm_run.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
         self.llm_undo = QPushButton()
         self.llm_undo.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowBack))
@@ -128,7 +128,7 @@ class MainWindow(QMainWindow):
         llm_box.addLayout(llm_ctrl)
         # LLM query field
         self.llm_query = CodeEditor(execute_callback=self._run_llm)
-        self.llm_query.setPlaceholderText("Enter LLM query here...")
+        self.llm_query.setPlaceholderText('Enter LLM query here...')
         llm_box.addWidget(self.llm_query)
 
         top_layout.addLayout(llm_box)
@@ -136,14 +136,14 @@ class MainWindow(QMainWindow):
         # XPath box (#2)
         xpath_box = QVBoxLayout()
         # XPath label
-        xpath_box.addWidget(QLabel("XPath Expression"))
+        xpath_box.addWidget(QLabel('XPath Expression'))
         # XPath controls
         xpath_ctrl = QHBoxLayout()
         xpath_ctrl.setContentsMargins(0, 0, 0, 0)
         xpath_ctrl.setSpacing(2)
         xpath_ctrl.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.xpath_run = QPushButton()
-        self.xpath_run.setToolTip("Run - Ctrl+Enter")
+        self.xpath_run.setToolTip('Run - Ctrl+Enter')
         self.xpath_run.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
         self.xpath_undo = QPushButton()
         self.xpath_undo.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowBack))
@@ -163,7 +163,7 @@ class MainWindow(QMainWindow):
         xpath_ctrl.addWidget(self.xpath_redo)
         xpath_ctrl.addWidget(self.xpath_clear)
         self.xpath_ns_edit = QLineEdit()
-        self.xpath_ns_edit.setPlaceholderText("ns")
+        self.xpath_ns_edit.setPlaceholderText('ns')
         self.xpath_ns_edit.setFixedWidth(100)
         self.xpath_ns_edit.setValidator(self.NameSpaceValidator(self))
         xpath_ctrl.addWidget(self.xpath_ns_edit)
@@ -171,7 +171,7 @@ class MainWindow(QMainWindow):
         xpath_box.addLayout(xpath_ctrl)
         # XPath query field
         self.xpath_query = CodeEditor(execute_callback=self._run_xpath)
-        self.xpath_query.setPlaceholderText("Enter XPath expression here...")
+        self.xpath_query.setPlaceholderText('Enter XPath expression here...')
         xpath_box.addWidget(self.xpath_query)
 
         top_layout.addLayout(xpath_box)
@@ -185,14 +185,14 @@ class MainWindow(QMainWindow):
         code_widget = QWidget()
         code_box = QVBoxLayout(code_widget)
         # Code label
-        code_box.addWidget(QLabel("Python Code"))
+        code_box.addWidget(QLabel('Python Code'))
         # Code controls
         code_ctrl = QHBoxLayout()
         code_ctrl.setContentsMargins(0, 0, 0, 0)
         code_ctrl.setSpacing(2)
         code_ctrl.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.code_run = QPushButton()
-        self.code_run.setToolTip("Run - Ctrl+Enter")
+        self.code_run.setToolTip('Run - Ctrl+Enter')
         self.code_run.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
         self.code_undo = QPushButton()
         self.code_undo.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowBack))
@@ -215,12 +215,12 @@ class MainWindow(QMainWindow):
         # Code editor
         self.code_editor = CodeEditor(execute_callback=self._run_code)
         self.code_editor.setPlaceholderText(
-            "Write Python code here...\n\n"
-            "`etree` is imported from `lxml`\n"
-            "`doc` is the XML document (`_ElementTree`)\n"
-            "`xpath_expr` is the last XPath (`str`)\n"
-            "`xpath_result` is the last XPath result (`list[_Element]`)\n"
-            "`nsmap` is the namespace map, to be passed as `namespaces`")
+            'Write Python code here...\n\n'
+            '`etree` is imported from `lxml`\n'
+            '`doc` is the XML document (`_ElementTree`)\n'
+            '`xpath_expr` is the last XPath (`str`)\n'
+            '`xpath_result` is the last XPath result (`list[_Element]`)\n'
+            '`nsmap` is the namespace map, to be passed as `namespaces`')
         code_box.addWidget(self.code_editor)
         mid_split.addWidget(code_widget)
 
@@ -228,7 +228,7 @@ class MainWindow(QMainWindow):
         sel_widget = QWidget()
         sel_box = QVBoxLayout(sel_widget)
         # Selection label
-        sel_box.addWidget(QLabel("Selection Viewer"))
+        sel_box.addWidget(QLabel('Selection Viewer'))
         # Selection controls above the view
         sel_ctrl = QHBoxLayout()
         sel_ctrl.setContentsMargins(0, 0, 0, 0)
@@ -238,7 +238,7 @@ class MainWindow(QMainWindow):
         self.strip_ns_toggle.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogResetButton))
         self.strip_ns_toggle.setCheckable(True)
         self.strip_ns_toggle.setChecked(False)
-        self.strip_ns_toggle.setToolTip("Strip namespace declarations")
+        self.strip_ns_toggle.setToolTip('Strip namespace declarations')
         for btn in [self.strip_ns_toggle]:
             btn.setFixedSize(32,32)
             btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
@@ -260,32 +260,54 @@ class MainWindow(QMainWindow):
         sel_box.addLayout(sel_ctrl)
         # Selection viewer
         self.selection_view = QTextBrowser()
-        self.selection_view.setPlaceholderText("XPath selection output...")
+        self.selection_view.setPlaceholderText('XPath selection output...')
         sel_box.addWidget(self.selection_view)
         mid_split.addWidget(sel_widget)
 
         self.splitter.addWidget(mid_split)
 
-        # Bottom panel: Output history (#5)
-        hist_widget = QWidget()
-        hist_box = QVBoxLayout(hist_widget)
-        # History label
-        hist_box.addWidget(QLabel("Output History"))
-        # History controls above the view
-        hist_ctrl = QHBoxLayout()
-        hist_ctrl.setContentsMargins(0, 0, 0, 0)
-        hist_ctrl.setSpacing(2)
-        hist_ctrl.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.history_clear = QPushButton()
-        self.history_clear.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogDiscardButton))
-        self.history_clear.setFixedSize(32,32)
-        self.history_clear.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.history_clear.clicked.connect(self._clear_history)
-        hist_ctrl.addWidget(self.history_clear)
-        hist_box.addLayout(hist_ctrl)
-        self.history_view = QTextBrowser()
-        hist_box.addWidget(self.history_view)
-        self.splitter.addWidget(hist_widget)
+        # Bottom panel: output and messages (#5)
+        bottom_split = QSplitter(Qt.Orientation.Horizontal)
+
+        # Output box
+        out_widget = QWidget()
+        out_box = QVBoxLayout(out_widget)
+        out_box.addWidget(QLabel('Output'))
+        out_ctrl = QHBoxLayout()
+        out_ctrl.setContentsMargins(0, 0, 0, 0)
+        out_ctrl.setSpacing(2)
+        out_ctrl.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.output_clear = QPushButton()
+        self.output_clear.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogDiscardButton))
+        self.output_clear.setFixedSize(32, 32)
+        self.output_clear.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.output_clear.clicked.connect(self._clear_output)
+        out_ctrl.addWidget(self.output_clear)
+        out_box.addLayout(out_ctrl)
+        self.output_view = QTextBrowser()
+        out_box.addWidget(self.output_view)
+        bottom_split.addWidget(out_widget)
+
+        # Messages box
+        msg_widget = QWidget()
+        msg_box = QVBoxLayout(msg_widget)
+        msg_box.addWidget(QLabel('Messages'))
+        msg_ctrl = QHBoxLayout()
+        msg_ctrl.setContentsMargins(0, 0, 0, 0)
+        msg_ctrl.setSpacing(2)
+        msg_ctrl.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.messages_clear = QPushButton()
+        self.messages_clear.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogDiscardButton))
+        self.messages_clear.setFixedSize(32, 32)
+        self.messages_clear.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.messages_clear.clicked.connect(self._clear_messages)
+        msg_ctrl.addWidget(self.messages_clear)
+        msg_box.addLayout(msg_ctrl)
+        self.messages_view = QTextBrowser()
+        msg_box.addWidget(self.messages_view)
+        bottom_split.addWidget(msg_widget)
+
+        self.splitter.addWidget(bottom_split)
 
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 2)
@@ -313,53 +335,53 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.splitter)
 
         # File menu
-        file_menu = self.menuBar().addMenu("File")
-        open_act = file_menu.addAction("Open...")
+        file_menu = self.menuBar().addMenu('File')
+        open_act = file_menu.addAction('Open...')
         open_act.triggered.connect(self._open_file)
-        save_act = file_menu.addAction("Save As...")
+        save_act = file_menu.addAction('Save As...')
         save_act.triggered.connect(self._save_file)
 
-        file_menu = self.menuBar().addMenu("LLM (OpenAI)")
+        file_menu = self.menuBar().addMenu('LLM (OpenAI)')
         if self.llm.api_key:
             if self.llm.api_key_env:
-                self.key_status_act = QAction("API Key: Environment", self)
+                self.key_status_act = QAction('API Key: Environment', self)
             else:
-                self.key_status_act = QAction("API Key: From Store", self)
+                self.key_status_act = QAction('API Key: From Store', self)
         else:
-            self.key_status_act = QAction("API Key: None", self)
+            self.key_status_act = QAction('API Key: None', self)
         file_menu.addAction(self.key_status_act)
-        set_key_act = file_menu.addAction("Set API key...")
+        set_key_act = file_menu.addAction('Set API key...')
         set_key_act.triggered.connect(self._set_api_key)
-        unset_key_act = file_menu.addAction("Unset API key")
+        unset_key_act = file_menu.addAction('Unset API key')
         unset_key_act.triggered.connect(self._unset_api_key)
 
     def _set_api_key(self):
-        text, ok = QInputDialog.getText(self, "Enter your API key",
-                                        "OpenAI API Key:", QLineEdit.EchoMode.Normal,
-                                        "")
+        text, ok = QInputDialog.getText(self, 'Enter your API key',
+                                        'OpenAI API Key:', QLineEdit.EchoMode.Normal,
+                                        '')
         if ok and text:
             store_api_key('OpenAI API Key', text)
             self.llm.api_key = text
             self.llm.api_key_env = False
-            self.key_status_act.setText("API Key: From Store")
+            self.key_status_act.setText('API Key: From Store')
 
     def _unset_api_key(self):
         delete_api_key('OpenAI API Key')
         self.llm.api_key = None
         self.llm.api_key_env = False
-        self.key_status_act.setText("API Key: None")
+        self.key_status_act.setText('API Key: None')
 
     def _open_file(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Open XML File", filter="XML Files (*.xml);;All Files (*)")
+        path, _ = QFileDialog.getOpenFileName(self, 'Open XML File', filter='XML Files (*.xml);;All Files (*)')
         if path:
             self.load_xml(path)
 
     def _save_file(self):
-        path, _ = QFileDialog.getSaveFileName(self, "Save XML File", filter="XML Files (*.xml);;All Files (*)")
+        path, _ = QFileDialog.getSaveFileName(self, 'Save XML File', filter='XML Files (*.xml);;All Files (*)')
         if path and self.doc:
             with open(path, 'wb') as f:
                 f.write(etree.tostring(self.doc, pretty_print=True, xml_declaration=True, encoding='UTF-8'))
-            self.history_view.append(f"Saved XML to: {path}")
+            self.messages_view.append(f'Saved XML to: {path}')
 
     def load_xml(self, path):
         self.doc, self.nsmap, self.ns = parse_xml(path)
@@ -368,7 +390,7 @@ class MainWindow(QMainWindow):
             self.xpath_ns_edit.show()
         else:
             self.xpath_ns_edit.hide()
-        self.history_view.append(f"Loaded XML from: {path}")
+        self.messages_view.append(f'Loaded XML from: {path}')
 
     # Undo/Redo/Clear handlers
     def _undo_llm(self):
@@ -419,8 +441,11 @@ class MainWindow(QMainWindow):
     def _clear_code(self):
         self.code_editor.clear()
 
-    def _clear_history(self):
-        self.history_view.clear()
+    def _clear_output(self):
+        self.output_view.clear()
+
+    def _clear_messages(self):
+        self.messages_view.clear()
 
     def _run_xpath(self):
         expr = self.xpath_query.toPlainText().strip()
@@ -428,10 +453,14 @@ class MainWindow(QMainWindow):
             return
         self.xpath_history.add(expr)
         self.xpath_expr = expr
-        self.xpath_result = apply_xpath(self.doc, expr, self.nsmap)
-        strip_ns = self.strip_ns_toggle.isChecked()
-        self.selection_view.setPlainText("\n".join(pretty_print(node, strip_ns) for node in self.xpath_result))
-        self.history_view.append(f"XPath executed: {expr}")
+        try:
+            self.xpath_result = apply_xpath(self.doc, expr, self.nsmap)
+            strip_ns = self.strip_ns_toggle.isChecked()
+            self.selection_view.setPlainText('\n'.join(pretty_print(node, strip_ns) for node in self.xpath_result))
+            self.messages_view.append(f'XPath executed: {expr}')
+        except etree.XPathEvalError as e:
+            error = f'  Error: {e}' if str(e) != 'Invalid expression' else ''
+            self.messages_view.append(f'Invalid XPath expression: {expr}{error}')
 
     def _run_code(self):
         code = self.code_editor.toPlainText()
@@ -449,17 +478,17 @@ class MainWindow(QMainWindow):
                       })
             output = buf.getvalue()
             if output:
-                self.history_view.append(output)
-            self.history_view.append("Code executed successfully.")
+                self.output_view.append(output)
+            self.messages_view.append('Code executed successfully.')
         except Exception as e:
-            self.history_view.append(f"Code execution error: {e}")
+            self.messages_view.append(f'Code execution error: {e}')
 
     def _run_llm(self):
         prompt = self.llm_query.toPlainText().strip()
         if not prompt:
             return
         self.llm_history.add(prompt)
-        self.history_view.append(f"LLM prompt: {prompt}")
+        self.messages_view.append(f'LLM prompt: {prompt}')
         xml_text = etree.tostring(self.doc, pretty_print=False, encoding='unicode') if self.doc else ''
         response = self.llm.query(prompt, {'xml': xml_text, 'xpath': self.xpath_expr, 'code': self.code_editor.toPlainText()}, self.ns)
         if 'xpath' in response:
@@ -469,4 +498,4 @@ class MainWindow(QMainWindow):
             self.code_editor.setPlainText(response['code'])
             self._run_code()
         if 'text' in response:
-            self.history_view.append(response['text'])
+            self.output_view.append(response['text'])

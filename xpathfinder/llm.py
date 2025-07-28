@@ -9,11 +9,11 @@ class LLMClient:
     A modern OpenAI ChatGPT client for generating XPath expressions and Python code.
     Always returns a dict with optional keys: 'xpath', 'code', 'text'.
     """
-    def __init__(self, api_key=None, model="gpt-3.5-turbo", **client_kwargs):
+    def __init__(self, api_key=None, model='gpt-3.5-turbo', **client_kwargs):
         self.api_key = api_key or retrieve_api_key('OpenAI API Key')
         self.api_key_env = False
         if not self.api_key:
-            self.api_key = os.getenv("OPENAI_API_KEY")
+            self.api_key = os.getenv('OPENAI_API_KEY')
             self.api_key_env = True
         # Initialize new OpenAI client
         self.client = OpenAI(api_key=self.api_key, **client_kwargs)
@@ -22,17 +22,17 @@ class LLMClient:
     def query(self, prompt: str, context: dict, ns: str) -> dict:
         # Build messages as plain dicts
         system_msg = {
-            "role": "system",
-            "content": (
-                f"You are an expert assistant specialized in XML, XPath, and Python scripting. "
-                f"When responding, output a JSON object with optional keys: 'xpath' (new XPath), "
-                f"'code' (Python snippets), and 'text' (plain-text advice)."
-                f"If there is no advice other than to apply the XPath or code, no advice should be given. "
-                f"When generating Xpath, keep in mind that the default namespace is called {ns}. "
-                f"When generating Python code, use the 'lxml' library for XML processing and know that "
-                f"lxml.etree is already imported as `etree`, `doc` is the current XML document, `xpath_expr` "
-                f"is the last XPath, `xpath_result` is the last XPath query result, and `nsmap` is the "
-                f"appropriate value for namespaces in queries and methods."
+            'role': 'system',
+            'content': (
+                f'You are an expert assistant specialized in XML, XPath, and Python scripting. '
+                f'When responding, output a JSON object with optional keys: `xpath` (new XPath), '
+                f'`code` (Python snippets), and `text` (plain-text advice).'
+                f'If there is no advice other than to apply the XPath or code, no advice should be given. '
+                f'When generating Xpath, keep in mind that the default namespace is called {ns}. '
+                f'When generating Python code, use the `lxml` library for XML processing and know that '
+                f'lxml.etree is already imported as `etree`, `doc` is the current XML document, `xpath_expr` '
+                f'is the last XPath, `xpath_result` is the last XPath query result, and `nsmap` is the '
+                f'appropriate value for namespaces in queries and methods.'
             )
         }
         xml_snip = context.get('xml', '')
@@ -41,13 +41,13 @@ class LLMClient:
 
         # Construct user content with literal '\n' escapes
         user_content = (
-            "Context:\n"
-            f"XML Document:\n```xml\n{xml_snip}\n```\n"
-            f"Current XPath:\n```xpath\n{xpath_snip}\n```\n"
-            f"Current Code:\n```python\n{code_snip}\n```\n"
-            f"User Query:\n{prompt}"
+            'Context:\n'
+            f'XML Document:\n```xml\n{xml_snip}\n```\n'
+            f'Current XPath:\n```xpath\n{xpath_snip}\n```\n'
+            f'Current Code:\n```python\n{code_snip}\n```\n'
+            f'User Query:\n{prompt}'
         )
-        user_msg = {"role": "user", "content": user_content}
+        user_msg = {'role': 'user', 'content': user_content}
 
         # Call new API
         response = self.client.chat.completions.create(
@@ -59,7 +59,7 @@ class LLMClient:
         try:
             return json.loads(raw)
         except json.JSONDecodeError:
-            return {"text": raw}
+            return {'text': raw}
 
 
 def store_api_key(target_name: str, api_key_value: str) -> None:
