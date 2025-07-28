@@ -1,5 +1,6 @@
 import sys
 import io
+from pathlib import Path
 from contextlib import redirect_stdout
 from typing import Callable
 
@@ -67,13 +68,19 @@ class MainWindow(QMainWindow):
         self.llm_history = HistoryManager()
         self.xpath_history = HistoryManager()
         self.code_history = HistoryManager()
+        self.file_history = HistoryManager(max_size=10)
 
         # LLM integration
         self.llm = LLMClient()
 
         self._setup_ui()
+        self.path = None
         if xml_file:
-            self.load_xml(xml_file)
+            if self.load_xml(xml_file):
+                self.path = xml_file
+                self.revert_act.setDisabled(False)
+                self.save_act.setDisabled(False)
+                self.save_as_act.setDisabled(False)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -171,7 +178,7 @@ class MainWindow(QMainWindow):
         xpath_box.addLayout(xpath_ctrl)
         # XPath query field
         self.xpath_query = CodeEditor(execute_callback=self._run_xpath)
-        self.xpath_query.setPlaceholderText('Enter XPath expression here...')
+        self.xpath_query.setPlaceholderText('Enter XPath expression here...\n`.` for current node\n`/` for document root')
         xpath_box.addWidget(self.xpath_query)
 
         top_layout.addLayout(xpath_box)
@@ -260,7 +267,7 @@ class MainWindow(QMainWindow):
         sel_box.addLayout(sel_ctrl)
         # Selection viewer
         self.selection_view = QTextBrowser()
-        self.selection_view.setPlaceholderText('XPath selection output...')
+        self.selection_view.setPlaceholderText('XPath selection output... (currently None)')
         sel_box.addWidget(self.selection_view)
         mid_split.addWidget(sel_widget)
 
@@ -338,8 +345,22 @@ class MainWindow(QMainWindow):
         file_menu = self.menuBar().addMenu('File')
         open_act = file_menu.addAction('Open...')
         open_act.triggered.connect(self._open_file)
-        save_act = file_menu.addAction('Save As...')
-        save_act.triggered.connect(self._save_file)
+        self.revert_act = file_menu.addAction('Revert to Saved')
+        self.revert_act.setDisabled(True)
+        self.revert_act.triggered.connect(self._revert_file)
+        self.save_act = file_menu.addAction('Save (Overwrite)')
+        self.save_act.setDisabled(True)
+        self.save_act.triggered.connect(self._save_file)
+        self.save_as_act = file_menu.addAction('Save As...')
+        self.save_as_act.setDisabled(True)
+        self.save_as_act.triggered.connect(self._save_as_file)
+        file_menu.addSeparator()
+        self.file_undo_act = file_menu.addAction('Undo (Code change)')
+        self.file_undo_act.setDisabled(True)
+        self.file_undo_act.triggered.connect(self._undo_last)
+        self.file_redo_act = file_menu.addAction('Redo')
+        self.file_redo_act.setDisabled(True)
+        self.file_redo_act.triggered.connect(self._redo_last)
 
         file_menu = self.menuBar().addMenu('LLM (OpenAI)')
         if self.llm.api_key:
@@ -375,22 +396,71 @@ class MainWindow(QMainWindow):
         path, _ = QFileDialog.getOpenFileName(self, 'Open XML File', filter='XML Files (*.xml);;All Files (*)')
         if path:
             self.load_xml(path)
+            self.path = path
+            self.file_undo_act.setDisabled(True)
 
-    def _save_file(self):
+    def _save_as_file(self):
         path, _ = QFileDialog.getSaveFileName(self, 'Save XML File', filter='XML Files (*.xml);;All Files (*)')
         if path and self.doc:
             with open(path, 'wb') as f:
                 f.write(etree.tostring(self.doc, pretty_print=True, xml_declaration=True, encoding='UTF-8'))
+            self.path = path
             self.messages_view.append(f'Saved XML to: {path}')
 
-    def load_xml(self, path):
-        self.doc, self.nsmap, self.ns = parse_xml(path)
+    def _save_file(self):
+        with open(self.path, 'wb') as f:
+            f.write(etree.tostring(self.doc, pretty_print=True, xml_declaration=True, encoding='UTF-8'))
+        self.messages_view.append(f'Saved XML to: {self.path}')
+
+    def _revert_file(self):
+        if self.path is None:
+            self.messages_view.append('<span style="color: red;">No file to revert</span>')
+            return
+        if not Path(self.path).exists():
+            self.messages_view.append(f'<span style="color: red;">File does not exist: {self.path}</span>')
+            return
+        if not self.load_xml(self.path):
+            self.messages_view.append(f'<span style="color: red;">Failed to revert file: {self.path}</span>')
+            return
+        self.messages_view.append(f'Reverted to XML from file: {self.path}</span>')
+        self.file_history.clear()
+        self.file_undo_act.setDisabled(True)
+        self.file_redo_act.setDisabled(True)
+
+    def _undo_last(self):
+        prev = self.file_history.undo()
+        if prev is None:
+            self.file_undo_act.setDisabled(True)
+            return
+        self.doc = prev
+        self.file_redo_act.setDisabled(False)
+        if self.file_history.index < 1:
+            self.file_undo_act.setDisabled(True)
+
+    def _redo_last(self):
+        _next = self.file_history.redo()
+        if _next is None:
+            self.file_redo_act.setDisabled(True)
+            return
+        self.doc = _next
+        self.file_undo_act.setDisabled(False)
+        if self.file_history.can_redo:
+            self.file_redo_act.setDisabled(True)
+
+    def load_xml(self, path) -> bool:
+        try:
+            self.doc, self.nsmap, self.ns = parse_xml(path)
+        except OSError:
+            self.messages_view.append(f'<span style="color: red;">Error loading XML from: {path}</span>')
+            return False
+
         if self.ns is not None:
             self.xpath_ns_edit.setText(self.ns)
             self.xpath_ns_edit.show()
         else:
             self.xpath_ns_edit.hide()
         self.messages_view.append(f'Loaded XML from: {path}')
+        return True
 
     # Undo/Redo/Clear handlers
     def _undo_llm(self):
@@ -460,7 +530,7 @@ class MainWindow(QMainWindow):
             self.messages_view.append(f'XPath executed: {expr}')
         except etree.XPathEvalError as e:
             error = f'  Error: {e}' if str(e) != 'Invalid expression' else ''
-            self.messages_view.append(f'Invalid XPath expression: {expr}{error}')
+            self.messages_view.append(f'<span style="color: red;">Invalid XPath expression: {expr}{error}</span>')
 
     def _run_code(self):
         code = self.code_editor.toPlainText()
@@ -468,6 +538,9 @@ class MainWindow(QMainWindow):
             return
         self.code_history.add(code)
         buf = io.StringIO()
+        self.file_history.add(self.doc)
+        self.file_undo_act.setDisabled(False)
+        self.file_redo_act.setDisabled(True)
         try:
             with redirect_stdout(buf):
                 exec(f'from lxml import etree\n\n{code}',
@@ -480,8 +553,9 @@ class MainWindow(QMainWindow):
             if output:
                 self.output_view.append(output)
             self.messages_view.append('Code executed successfully.')
+            self._run_xpath()
         except Exception as e:
-            self.messages_view.append(f'Code execution error: {e}')
+            self.messages_view.append(f'<span style="color: red;">Code execution error: {e}</span>')
 
     def _run_llm(self):
         prompt = self.llm_query.toPlainText().strip()
