@@ -23,7 +23,7 @@ Create and [activate a virtual environment][venv], then install the package:
 ```
 git clone https://github.com/Grismar/xpathfinder.git
 cd xpathfinder
-pip install .
+pip install -e .
 ```
 
 Using conda, instead of `pip install .` you can create an environment and install Python and the packages from the provided `environment.yml` file in one go:
