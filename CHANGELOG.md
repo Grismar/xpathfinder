@@ -6,7 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.1.1] - 2021-07-29
+## [0.1.2] - 2021-07-29
+
+### Fixed
+- enable options after opening a file
+
+## [0.1.2] - 2021-07-29
 
 ### Added
 - Execute XPath after successful code execution

@@ -345,7 +345,7 @@ class MainWindow(QMainWindow):
         file_menu = self.menuBar().addMenu('File')
         open_act = file_menu.addAction('Open...')
         open_act.triggered.connect(self._open_file)
-        self.revert_act = file_menu.addAction('Revert to Saved')
+        self.revert_act = file_menu.addAction('Revert / Reload')
         self.revert_act.setDisabled(True)
         self.revert_act.triggered.connect(self._revert_file)
         self.save_act = file_menu.addAction('Save (Overwrite)')
@@ -398,6 +398,10 @@ class MainWindow(QMainWindow):
             self.load_xml(path)
             self.path = path
             self.file_undo_act.setDisabled(True)
+            self.file_redo_act.setDisabled(True)
+            self.save_act.setDisabled(False)
+            self.save_as_act.setDisabled(False)
+            self.revert_act.setDisabled(False)
 
     def _save_as_file(self):
         path, _ = QFileDialog.getSaveFileName(self, 'Save XML File', filter='XML Files (*.xml);;All Files (*)')
@@ -422,7 +426,7 @@ class MainWindow(QMainWindow):
         if not self.load_xml(self.path):
             self.messages_view.append(f'<span style="color: red;">Failed to revert file: {self.path}</span>')
             return
-        self.messages_view.append(f'Reverted to XML from file: {self.path}</span>')
+        self.messages_view.append(f'Reloaded XML from file: {self.path}')
         self.file_history.clear()
         self.file_undo_act.setDisabled(True)
         self.file_redo_act.setDisabled(True)
