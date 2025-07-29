@@ -6,7 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.1.2] - 2021-07-29
+## [0.1.4] - 2021-07-30
+
+### Added
+- add bracket matching in the code editor
+- add auto-indent on new lines in the code editor
+- add appropriate indent size on Tab
+
+### Changes
+- add Exit option to the file menu
+- clean up layout across panels
+- change editor style to be more suitable for code editing
+
+## [0.1.3] - 2021-07-29
 
 ### Fixed
 - enable options after opening a file
@@ -43,4 +55,5 @@ Initial release, basic functionality:
 - Basic file picker for loading XML files
 
 [Unreleased]: /../../../
-[0.1.0]: /../../../tags/0.1.0
+[0.1.4]: /../../../tags/0.1.4
+[0.1.1]: /../../../tags/0.1.1

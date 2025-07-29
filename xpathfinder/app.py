@@ -1,3 +1,4 @@
+import re
 import sys
 import io
 from pathlib import Path
@@ -10,11 +11,12 @@ from PySide6.QtWidgets import (
     QTextBrowser, QLabel, QSplitter, QStyle, QSizePolicy, QLineEdit
 )
 from PySide6.QtCore import Qt, QObject
-from PySide6.QtGui import QValidator, QAction, QKeyEvent
+from PySide6.QtGui import QValidator, QAction, QFont, QTextCursor, QKeyEvent, QTextCharFormat, QColor
 from lxml import etree
 from .llm import LLMClient, store_api_key, delete_api_key
 from .history import HistoryManager
 from .xml_utils import parse_xml, apply_xpath, pretty_print
+
 
 class XPathFinderApp:
     def __init__(self, xml_file=None):
@@ -25,15 +27,124 @@ class XPathFinderApp:
         self.window.show()
         sys.exit(self.qt_app.exec())
 
+
 class CodeEditor(QPlainTextEdit):
-    def __init__(self, parent=None, execute_callback: Callable=None):
+    def __init__(self, parent=None, execute_callback: Callable = None, tab_width: int = 4):
         super().__init__(parent)
         self.execute_callback = execute_callback
+        self.tab_width = tab_width
+
+        # Font
+        font = QFont("Consolas", 11)
+        font.setStyleHint(QFont.StyleHint.Monospace)
+        self.setFont(font)
+        self.setTabStopDistance(self.tab_width * self.fontMetrics().horizontalAdvance(' '))
+
+        # Format for highlighting brackets
+        self.bracket_format = QTextCharFormat()
+        self.bracket_format.setBackground(QColor("#d0d0ff"))
+        self.bracket_format.setForeground(QColor("black"))
 
     def keyPressEvent(self, event: QKeyEvent):
-        if event.key() == Qt.Key.Key_Return and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            self.execute_callback()
-        super().keyPressEvent(event)  # default behavior
+        key = event.key()
+        modifiers = event.modifiers()
+
+        if key == Qt.Key.Key_Return and modifiers & Qt.KeyboardModifier.ControlModifier:
+            if self.execute_callback:
+                self.execute_callback()
+            return
+
+        elif key == Qt.Key.Key_Return:
+            self.handle_auto_indent()
+            return
+
+        elif key == Qt.Key.Key_Tab:
+            self.insertPlainText(" " * self.tab_width)
+            return
+
+        super().keyPressEvent(event)
+        self.highlight_matching_brackets()
+
+    def handle_auto_indent(self):
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock, QTextCursor.MoveMode.KeepAnchor)
+        line = cursor.selectedText()
+        indent = re.match(r"\s*", line).group()
+        super().keyPressEvent(QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Return, Qt.KeyboardModifier.NoModifier))
+        self.insertPlainText(indent)
+
+    def highlight_matching_brackets(self):
+        cursor = self.textCursor()
+        pos = cursor.position()
+        doc = self.document()
+
+        pairs = {'(': ')', '{': '}', '[': ']'}
+        openers = pairs.keys()
+        closers = pairs.values()
+
+        # Clear previous formatting
+        cursor.select(QTextCursor.SelectionType.Document)
+        default_format = QTextCharFormat()
+        cursor.setCharFormat(default_format)
+        cursor.clearSelection()
+
+        def highlight(pos1, pos2):
+            for p in (pos1, pos2):
+                c = QTextCursor(doc)
+                c.setPosition(p)
+                c.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
+                c.setCharFormat(self.bracket_format)
+
+        # Look left for opener
+        if pos > 0:
+            char = doc.characterAt(pos - 1)
+            if char in openers:
+                match = self.find_matching_bracket(pos - 1, forward=True)
+                if match is not None:
+                    highlight(pos - 1, match)
+            elif char in closers:
+                match = self.find_matching_bracket(pos - 1, forward=False)
+                if match is not None:
+                    highlight(pos - 1, match)
+
+    def find_matching_bracket(self, pos, forward=True):
+        doc = self.document()
+        pairs = {'(': ')', '{': '}', '[': ']'}
+        inverse = {v: k for k, v in pairs.items()}
+
+        open_char = doc.characterAt(pos)
+        match_char = pairs.get(open_char) if forward else inverse.get(open_char)
+
+        if not match_char:
+            return None
+
+        stack = 1
+        step = 1 if forward else -1
+        p = pos + step
+        while 0 <= p < doc.characterCount():
+            c = doc.characterAt(p)
+            if c == open_char:
+                stack += 1
+            elif c == match_char:
+                stack -= 1
+                if stack == 0:
+                    return p
+            p += step
+
+        return None
+
+
+class CodeViewer(QTextBrowser):
+    def __init__(self, parent=None, font_family="Consolas", font_size=11):
+        super().__init__(parent)
+
+        self.code_font = QFont(font_family, font_size)
+        self.code_font.setStyleHint(QFont.StyleHint.Monospace)
+        self.setFont(self.code_font)
+
+        # Optional: disable word wrap for more code-like behavior
+        self.setLineWrapMode(QTextBrowser.LineWrapMode.NoWrap)
+
 
 class MainWindow(QMainWindow):
     class NameSpaceValidator(QValidator):
@@ -91,8 +202,8 @@ class MainWindow(QMainWindow):
 
     def _resize_splitter(self):
         total_h = self.height()
-        top_h = int(total_h * 0.15)  # 15% for LLM+XPath
-        bot_h = int(total_h * 0.30)  # 30% for history
+        top_h = int(total_h * 0.18)  # 18% for LLM+XPath
+        bot_h = int(total_h * 0.32)  # 32% for history
         mid_h = total_h - top_h - bot_h
         self.splitter.setSizes([top_h, mid_h, bot_h])
 
@@ -100,13 +211,12 @@ class MainWindow(QMainWindow):
         self.splitter = QSplitter(Qt.Orientation.Vertical)
 
         # Top panel: LLM + XPath, no resizing
-        top_panel = QWidget()
-        top_layout = QHBoxLayout(top_panel)
+        top_split = QSplitter(Qt.Orientation.Horizontal)
 
         # LLM box (#1)
-        llm_box = QVBoxLayout()
-        # LLM label
-        llm_box.addWidget(QLabel('LLM Query'))
+        llm_widget = QWidget()
+        llm_widget.setContentsMargins(0, 0, -2, 0)
+        llm_box = QVBoxLayout(llm_widget)
         # LLM controls
         llm_ctrl = QHBoxLayout()
         llm_ctrl.setContentsMargins(0, 0, 0, 0)
@@ -132,18 +242,22 @@ class MainWindow(QMainWindow):
         llm_ctrl.addWidget(self.llm_undo)
         llm_ctrl.addWidget(self.llm_redo)
         llm_ctrl.addWidget(self.llm_clear)
+        # LLM label
+        llm_ctrl.addStretch()
+        llm_label = QLabel('LLM Query')
+        llm_label.setStyleSheet("padding-right: 8px;")
+        llm_ctrl.addWidget(llm_label)
         llm_box.addLayout(llm_ctrl)
         # LLM query field
         self.llm_query = CodeEditor(execute_callback=self._run_llm)
         self.llm_query.setPlaceholderText('Enter LLM query here...')
         llm_box.addWidget(self.llm_query)
-
-        top_layout.addLayout(llm_box)
+        top_split.addWidget(llm_widget)
 
         # XPath box (#2)
-        xpath_box = QVBoxLayout()
-        # XPath label
-        xpath_box.addWidget(QLabel('XPath Expression'))
+        xpath_widget = QWidget()
+        xpath_widget.setContentsMargins(0, 0, -2, 0)
+        xpath_box = QVBoxLayout(xpath_widget)
         # XPath controls
         xpath_ctrl = QHBoxLayout()
         xpath_ctrl.setContentsMargins(0, 0, 0, 0)
@@ -169,6 +283,11 @@ class MainWindow(QMainWindow):
         xpath_ctrl.addWidget(self.xpath_undo)
         xpath_ctrl.addWidget(self.xpath_redo)
         xpath_ctrl.addWidget(self.xpath_clear)
+        # XPath label
+        xpath_ctrl.addStretch()
+        xpath_label = QLabel('XPath Query')
+        xpath_label.setStyleSheet("padding-right: 8px;")
+        xpath_ctrl.addWidget(xpath_label)
         self.xpath_ns_edit = QLineEdit()
         self.xpath_ns_edit.setPlaceholderText('ns')
         self.xpath_ns_edit.setFixedWidth(100)
@@ -177,22 +296,20 @@ class MainWindow(QMainWindow):
         self.xpath_ns_edit.hide()
         xpath_box.addLayout(xpath_ctrl)
         # XPath query field
-        self.xpath_query = CodeEditor(execute_callback=self._run_xpath)
+        self.xpath_query = CodeEditor(execute_callback=self._run_xpath, tab_width=2)
         self.xpath_query.setPlaceholderText('Enter XPath expression here...\n`.` for current node\n`/` for document root')
         xpath_box.addWidget(self.xpath_query)
+        top_split.addWidget(xpath_widget)
 
-        top_layout.addLayout(xpath_box)
-
-        self.splitter.addWidget(top_panel)
+        self.splitter.addWidget(top_split)
 
         # Middle panel: Code + Selection, splitter for resizing
         mid_split = QSplitter(Qt.Orientation.Horizontal)
 
         # Code box (#3)
         code_widget = QWidget()
+        code_widget.setContentsMargins(0, 0, -2, 0)
         code_box = QVBoxLayout(code_widget)
-        # Code label
-        code_box.addWidget(QLabel('Python Code'))
         # Code controls
         code_ctrl = QHBoxLayout()
         code_ctrl.setContentsMargins(0, 0, 0, 0)
@@ -218,6 +335,11 @@ class MainWindow(QMainWindow):
         code_ctrl.addWidget(self.code_undo)
         code_ctrl.addWidget(self.code_redo)
         code_ctrl.addWidget(self.code_clear)
+        # Code label
+        code_ctrl.addStretch()
+        code_label = QLabel('Python Code Editor')
+        code_label.setStyleSheet("padding-right: 8px;")
+        code_ctrl.addWidget(code_label)
         code_box.addLayout(code_ctrl)
         # Code editor
         self.code_editor = CodeEditor(execute_callback=self._run_code)
@@ -233,9 +355,8 @@ class MainWindow(QMainWindow):
 
         # Selection box (#4)
         sel_widget = QWidget()
+        sel_widget.setContentsMargins(0, 0, -2, 0)
         sel_box = QVBoxLayout(sel_widget)
-        # Selection label
-        sel_box.addWidget(QLabel('Selection Viewer'))
         # Selection controls above the view
         sel_ctrl = QHBoxLayout()
         sel_ctrl.setContentsMargins(0, 0, 0, 0)
@@ -264,9 +385,14 @@ class MainWindow(QMainWindow):
             }
         """)
         sel_ctrl.addWidget(self.strip_ns_toggle)
+        # Selection label
+        sel_ctrl.addStretch()
+        sel_label = QLabel('Selection Viewer')
+        sel_label.setStyleSheet("padding-right: 8px;")
+        sel_ctrl.addWidget(sel_label)
         sel_box.addLayout(sel_ctrl)
         # Selection viewer
-        self.selection_view = QTextBrowser()
+        self.selection_view = CodeViewer()
         self.selection_view.setPlaceholderText('XPath selection output... (currently None)')
         sel_box.addWidget(self.selection_view)
         mid_split.addWidget(sel_widget)
@@ -278,8 +404,8 @@ class MainWindow(QMainWindow):
 
         # Output box
         out_widget = QWidget()
+        out_widget.setContentsMargins(0, 0, -2, 0)
         out_box = QVBoxLayout(out_widget)
-        out_box.addWidget(QLabel('Output'))
         out_ctrl = QHBoxLayout()
         out_ctrl.setContentsMargins(0, 0, 0, 0)
         out_ctrl.setSpacing(2)
@@ -290,15 +416,20 @@ class MainWindow(QMainWindow):
         self.output_clear.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.output_clear.clicked.connect(self._clear_output)
         out_ctrl.addWidget(self.output_clear)
+        # Output label
+        out_ctrl.addStretch()
+        out_label = QLabel('Output')
+        out_label.setStyleSheet("padding-right: 8px;")
+        out_ctrl.addWidget(out_label)
         out_box.addLayout(out_ctrl)
-        self.output_view = QTextBrowser()
+        self.output_view = CodeViewer()
         out_box.addWidget(self.output_view)
         bottom_split.addWidget(out_widget)
 
         # Messages box
         msg_widget = QWidget()
+        out_widget.setContentsMargins(0, 0, 0, 0)
         msg_box = QVBoxLayout(msg_widget)
-        msg_box.addWidget(QLabel('Messages'))
         msg_ctrl = QHBoxLayout()
         msg_ctrl.setContentsMargins(0, 0, 0, 0)
         msg_ctrl.setSpacing(2)
@@ -309,8 +440,13 @@ class MainWindow(QMainWindow):
         self.messages_clear.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.messages_clear.clicked.connect(self._clear_messages)
         msg_ctrl.addWidget(self.messages_clear)
+        # Messages label
+        msg_ctrl.addStretch()
+        msg_label = QLabel('Messages')
+        msg_label.setStyleSheet("padding-right: 8px;")
+        msg_ctrl.addWidget(msg_label)
         msg_box.addLayout(msg_ctrl)
-        self.messages_view = QTextBrowser()
+        self.messages_view = CodeViewer()
         msg_box.addWidget(self.messages_view)
         bottom_split.addWidget(msg_widget)
 
@@ -361,6 +497,9 @@ class MainWindow(QMainWindow):
         self.file_redo_act = file_menu.addAction('Redo')
         self.file_redo_act.setDisabled(True)
         self.file_redo_act.triggered.connect(self._redo_last)
+        file_menu.addSeparator()
+        file_exit = file_menu.addAction('Exit')
+        file_exit.triggered.connect(self.close)
 
         file_menu = self.menuBar().addMenu('LLM (OpenAI)')
         if self.llm.api_key:
