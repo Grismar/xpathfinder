@@ -75,7 +75,9 @@ The LLM Query Panel allows you to interact with an OpenAI GPT model to generate 
 - Generate Python code snippets that operate on the XML or XPath selection
 - Provide explanations for XPath expressions or Python code
 
-Set your OpenAI API key in the `OPENAI_API_KEY` environment variable to enable LLM assistance.
+Set your OpenAI API key in the `OPENAI_API_KEY` environment variable to enable LLM assistance, or if on Windows (preferably), set your API key through the menu, which will store it using the Windows Credential Manager.
+
+For users of [https://github.com/Grismar/gpt], note that this app shares the same key and stores it in the same location. If you already use that tool, XPathfinder will automatically work, and vice versa. 
 
 [git]: https://git-scm.com/
 [venv]: https://docs.python.org/3/library/venv.html
