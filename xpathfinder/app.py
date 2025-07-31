@@ -283,17 +283,19 @@ class MainWindow(QMainWindow):
         xpath_ctrl.addWidget(self.xpath_undo)
         xpath_ctrl.addWidget(self.xpath_redo)
         xpath_ctrl.addWidget(self.xpath_clear)
+        self.ns_label = QLabel('No global namespace.')
+        xpath_ctrl.addWidget(self.ns_label)
+        self.xpath_ns_edit = QLineEdit()
+        self.xpath_ns_edit.setPlaceholderText('ns')
+        self.xpath_ns_edit.setFixedWidth(80)
+        self.xpath_ns_edit.setValidator(self.NameSpaceValidator(self))
+        xpath_ctrl.addWidget(self.xpath_ns_edit)
+        self.xpath_ns_edit.hide()
         # XPath label
         xpath_ctrl.addStretch()
         xpath_label = QLabel('XPath Query')
         xpath_label.setStyleSheet("padding-right: 8px;")
         xpath_ctrl.addWidget(xpath_label)
-        self.xpath_ns_edit = QLineEdit()
-        self.xpath_ns_edit.setPlaceholderText('ns')
-        self.xpath_ns_edit.setFixedWidth(100)
-        self.xpath_ns_edit.setValidator(self.NameSpaceValidator(self))
-        xpath_ctrl.addWidget(self.xpath_ns_edit)
-        self.xpath_ns_edit.hide()
         xpath_box.addLayout(xpath_ctrl)
         # XPath query field
         self.xpath_query = CodeEditor(execute_callback=self._run_xpath, tab_width=2)
@@ -599,9 +601,11 @@ class MainWindow(QMainWindow):
 
         if self.ns is not None:
             self.xpath_ns_edit.setText(self.ns)
+            self.ns_label.setText('Global namespace:')
             self.xpath_ns_edit.show()
         else:
             self.xpath_ns_edit.hide()
+            self.ns_label.setText('No global namespace.')
         self.messages_view.append(f'Loaded XML from: {path}')
         return True
 

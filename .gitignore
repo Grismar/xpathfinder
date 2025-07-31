@@ -1,5 +1,6 @@
 .idea/
 .vscode/
+*.egg-info/
 *.py[ocd]
 # ignore everything in example/ but not the folder itself, and then simple.xml
 example/*
