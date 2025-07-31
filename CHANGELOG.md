@@ -72,5 +72,6 @@ Initial release, basic functionality:
 - Basic file picker for loading XML files
 
 [Unreleased]: /../../../
+[0.1.5]: /../../../tags/0.1.5
 [0.1.4]: /../../../tags/0.1.4
 [0.1.1]: /../../../tags/0.1.1
