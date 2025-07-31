@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.5] - 2021-07-31
+
+### Added
+- replace full XML with structure and sample in the LLM query, to avoid oversized queries
+- add a label indicating the meaning of the namespace prefix control (and whether a global namespace is defined)
+
+### Changed
+- adjust and improve the system prompt for the LLM, to make use of structure and sample, and get idiomatic results
+
+### Fixed
+- position namespace prefix control before the label
+
+### Changes
+- add Exit option to the file menu
+- clean up layout across panels
+- change editor style to be more suitable for code editing
+
 ## [0.1.4] - 2021-07-30
 
 ### Added

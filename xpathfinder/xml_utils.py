@@ -1,5 +1,6 @@
 from typing import Union, List, Optional
 from lxml import etree
+from collections import defaultdict
 
 # Aliases for XML types (protected internals referenced once)
 # noinspection PyProtectedMember
@@ -90,3 +91,48 @@ def pretty_print(node: Union[Node, Document, object], strip_ns: bool = False) ->
         return etree.tostring(node, pretty_print=True, encoding='unicode')
     except (TypeError, ValueError):
         return str(node)
+
+def summarize_xml_structure(doc: Document) -> str:
+    root = doc.getroot()
+
+    summary_lines = []
+    tag_tree = defaultdict(lambda: {"count": 0, "attributes": set(), "children": defaultdict(int)})
+
+    def traverse(elem, parent_tag=None):
+        if not isinstance(elem.tag, str):  # Skip non-element nodes, like comments or processing instructions
+            return
+        tag = etree.QName(elem).localname
+        tag_tree[tag]["count"] += 1
+        tag_tree[tag]["attributes"].update(elem.attrib.keys())
+        if parent_tag:
+            tag_tree[parent_tag]["children"][tag] += 1
+        for child in elem:
+            traverse(child, tag)
+
+    traverse(root)
+
+    def format_summary(tag, indent=0, seen=None):
+        if seen is None:
+            seen = set()
+
+        children = tag_tree[tag]["children"]
+        attrs = tag_tree[tag]["attributes"]
+        line = "  " * indent + f"- <{tag}>"
+        if attrs:
+            line += f" [attributes: {', '.join(sorted(attrs))}]"
+        summary_lines.append(line)
+
+        if tag in seen:
+            summary_lines.append("  " * (indent + 1) + "(recursive element)")
+            return
+
+        new_seen = seen | {tag}
+        for child_tag in sorted(children.keys()):
+            format_summary(child_tag, indent + 1, new_seen)
+
+    root_tag = etree.QName(root).localname
+    summary_lines.append(f"<{root_tag}>")
+    for child_tag in sorted(tag_tree[root_tag]["children"].keys()):
+        format_summary(child_tag, 1)
+
+    return "\n".join(summary_lines)

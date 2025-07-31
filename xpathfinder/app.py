@@ -15,7 +15,7 @@ from PySide6.QtGui import QValidator, QAction, QFont, QTextCursor, QKeyEvent, QT
 from lxml import etree
 from .llm import LLMClient, store_api_key, delete_api_key
 from .history import HistoryManager
-from .xml_utils import parse_xml, apply_xpath, pretty_print
+from .xml_utils import parse_xml, apply_xpath, pretty_print, summarize_xml_structure
 
 
 class XPathFinderApp:
@@ -710,8 +710,18 @@ class MainWindow(QMainWindow):
             return
         self.llm_history.add(prompt)
         self.messages_view.append(f'LLM prompt: {prompt}')
-        xml_text = etree.tostring(self.doc, pretty_print=False, encoding='unicode') if self.doc else ''
-        response = self.llm.query(prompt, {'xml': xml_text, 'xpath': self.xpath_expr, 'code': self.code_editor.toPlainText()}, self.ns)
+        if self.doc:
+            xml_structure = summarize_xml_structure(self.doc)
+            xml_str = etree.tostring(self.doc, pretty_print=False, encoding='unicode') if self.doc else ''
+            xml_sample = '\n'.join(xml_str.splitlines()[:200])  # max 200 lines for sample
+        else:
+            xml_sample = xml_structure = 'No XML loaded yet.'
+        response = self.llm.query(prompt, {
+            'xml_structure': xml_structure,
+            'xml_sample': xml_sample,
+            'xpath': self.xpath_expr,
+            'code': self.code_editor.toPlainText()
+        }, self.ns)
         if 'xpath' in response:
             self.xpath_query.setPlainText(response['xpath'])
             self._run_xpath()

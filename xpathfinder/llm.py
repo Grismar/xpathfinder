@@ -25,25 +25,33 @@ class LLMClient:
             'role': 'system',
             'content': (
                 f'You are an expert assistant specialized in XML, XPath, and Python scripting. '
+                f'The request includes a User Query, XML Structure describing the structure of the current document, '
+                f'XML sample as a sample of the xml data (if too large to include entirely), Current XPath with the '
+                f'most recent XPath expression, and Current Code with the most recent Python code. '
                 f'When responding, output a JSON object with optional keys: "xpath" (new XPath), '
-                f'"code" (Python snippet), and "text" (plain-text advice). Do not format the response as markdown.'
+                f'"code" (Python snippet), and "text" (plain-text advice to the user). '
+                f'Do not format the response as markdown. '
                 f'If there is no advice other than to apply the XPath or code, no text advice should be given. '
-                f'When generating Xpath, correctly apply the default namespace to elements in the namespace `{ns}`. '
-                f'When generating Python code, use the `lxml` library for XML processing and make use of: '
-                f'`lxml.etree` is already imported as `etree`, `doc` is the current XML document, `xpath_expr` '
-                f'is the last XPath, `xpath_result` is the last XPath query result, and `nsmap` is the '
-                f'appropriate value for namespaces in queries and methods. Make use of the variables as needed. '
-                f'Be concise and precise in your responses.'
+                f'When generating Xpath, apply the default namespace to elements in the namespace `{ns}` where needed. '
+                f'When generating Python code, use the `lxml` library for XML processing and remember: '
+                f'`lxml.etree` is already imported as `etree`, `doc` contains a reference to the current XML document, '
+                f'`xpath_expr` contains the last XPath, `xpath_result` contains the last XPath query result, '
+                f'and `nsmap` contains a dict to be used `namespaces` in queries and methods. '
+                f'Make use of these variables as needed. '
+                f'Only create local files when specifically requested, otherwise generate text output from Python. '
+                f'Be concise and precise in your responses, using the most idiomatic XPath and Python.'
             )
         }
-        xml_snip = context.get('xml', '')
+        xml_structure = context.get('xml_structure', '')
+        xml_sample = context.get('xml_sample', '')
         xpath_snip = context.get('xpath', '')
         code_snip = context.get('code', '')
 
         # Construct user content with literal '\n' escapes
         user_content = (
             'Context:\n'
-            f'XML Document:\n```xml\n{xml_snip}\n```\n'
+            f'XML Structure:\n```\n{xml_structure}\n```\n'
+            f'XML Sample:\n```xml\n{xml_sample}\n```\n'
             f'Current XPath:\n```xpath\n{xpath_snip}\n```\n'
             f'Current Code:\n```python\n{code_snip}\n```\n'
             f'User Query:\n{prompt}'
